@@ -183,9 +183,9 @@
         const TIME_LIMIT = 10; 
         
         /* 音声ファイルの読み込み（音を使うときはコメントを外す） */
-        /* const correctSound = new Audio("sound/correct.mp3"); */
-        /* const wrongSound = new Audio("sound/wrong.mp3");     */
-        /* const timeUpSound = new Audio("sound/timeup.mp3");   */
+        const correctSound = new Audio("sound/correct.mp3");
+        const wrongSound = new Audio("sound/wrong.mp3");
+        const timeUpSound = new Audio("sound/timeup.mp3");
 
         /* ★新機能：キャラクター画像を番号で管理するリスト */
         /* ここに実際の画像ファイル名を入れてください */
@@ -220,9 +220,9 @@
             startScreen.style.display = 'none';
             quizContainer.style.display = 'block';
             
-            /* playSilent(correctSound); */
-            /* playSilent(wrongSound); */
-            /* playSilent(timeUpSound); */
+            playSilent(correctSound);
+            playSilent(wrongSound);
+            playSilent(timeUpSound);
 
             initQuiz();
         }
