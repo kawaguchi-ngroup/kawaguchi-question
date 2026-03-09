@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webクイズアプリ</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* スタート画面 */
+        #start-screen { display: block; padding: 50px 20px; }
+        
+        #start-image {
+            display: block; height: 250px; width: auto; max-width: 100%;
+            object-fit: contain; margin: 0 auto 20px; border-radius: 8px;
+        }
+
+        .start-title { font-size: 32px; color: #007bff; margin-bottom: 20px; }
+        .start-desc { font-size: 16px; margin-bottom: 40px; color: #666; line-height: 1.8; }
+        .start-btn {
+            background-color: #ff5722; color: white; font-size: 24px; padding: 15px 40px;
+            border: none; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255, 87, 34, 0.3); transition: transform 0.2s;
+        }
+        .start-btn:hover { transform: scale(1.05); background-color: #e64a19; }
+
+        /* クイズ画面 */
+        #quiz-container { display: none; }
+
+        h1 { font-size: 1.8em; margin: 0.5em 0; }
+        
+        #difficulty-label {
+            position: absolute; top: 20px; right: 30px;
+            font-size: 18px; color: #ff9800; font-weight: bold;
+        }
+
+        #timer-container { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #555; }
+        #timer { font-size: 28px; color: #dc3545; font-family: monospace; }
+        
+        /* ★キャラクターと吹き出しのレイアウト */
+        #speaker-area {
+            display: flex;
+            align-items: center; /* キャラと吹き出しの高さを中央揃え */
+            justify-content: center;
+            margin: 20px 0;
+            gap: 15px;
+        }
+
+        .character-box {
+            width: 100px;    /* キャラの枠の幅 */
+            height: 100px;   /* キャラの枠の高さ */
+            flex-shrink: 0;  /* 枠が縮まないようにする */
+        }
+
+        #char-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* ★これで比率バラバラでも綺麗に収まる！ */
+            display: none;
+        }
+
+        .speech-bubble {
+            position: relative;
+            background: #e0f7fa; /* 吹き出しの背景色（薄い水色） */
+            padding: 15px 20px;
+            border-radius: 15px;
+            flex-grow: 1;
+            text-align: left;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* 吹き出しの「しっぽ」部分 */
+        .speech-bubble::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: -12px;
+            transform: translateY(-50%);
+            border-top: 12px solid transparent;
+            border-right: 12px solid #e0f7fa; /* 吹き出しと同じ色にする */
+            border-bottom: 12px solid transparent;
+        }
+
+        #question { margin: 0; font-size: 18px; line-height: 1.5; }
+
+        /* 問題用の図形や写真 */
+        #quiz-image {
+            display: none; height: 200px; width: auto; max-width: 100%;
+            object-fit: contain; margin: 0 auto 20px; border-radius: 8px;
+        }
+
+        .btn {
+            display: block; width: 100%; padding: 15px; margin: 10px 0;
+            background-color: #007bff; color: white; border: none; border-radius: 8px;
+            font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+        .btn:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
+
+        #feedback { font-size: 24px; font-weight: bold; margin: 20px 0; min-height: 36px; }
+        .correct { color: #28a745; }
+        .wrong { color: #dc3545; }
+
+        #next-btn { display: none; background-color: #ff9800; margin-top: 20px; }
+        #next-btn:hover { background-color: #e68900; }
+
+        #explanation {
+            display: none; margin-top: 20px; padding: 20px; background-color: #f1f3f5;
+            border-left: 5px solid #007bff; border-radius: 4px; text-align: left;
+            font-size: 15px; line-height: 1.6;
+        }
+        
+        #result { font-size: 22px; font-weight: bold; margin-top: 20px;}
+
+        /* スマホ対応 */
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .container { padding: 20px 15px; }
+            h1 { font-size: 20px; margin-top: 35px; }
+            #difficulty-label { top: 10px; right: 15px; font-size: 14px; }
+            .character-box { width: 70px; height: 70px; } /* スマホではキャラを少し小さく */
+            #question { font-size: 16px; }
+            .btn { padding: 12px; }
+            #timer-container { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="container">
+        <img id="start-image" src="logo.png" alt="タイトル画像">
+        <h1 class="start-title">Webクイズに挑戦！</h1>
+        <p class="start-desc">全10問のクイズが出題されます。<br>制限時間は10秒！<br>準備はいいですか？</p>
+        <button class="start-btn" onclick="startGame()">スタート！</button>
+    </div>
+
+    <div id="quiz-container" class="container">
+        <div id="difficulty-label"></div>
+        <h1>Webクイズに挑戦！</h1>
+        
+        <div id="timer-container">残り時間: <span id="timer">10</span>秒</div>
+
+        <div id="speaker-area">
+            <div class="character-box">
+                <img id="char-image" src="" alt="キャラクター">
+            </div>
+            <div class="speech-bubble">
+                <h2 id="question">問題を読み込み中...</h2>
+            </div>
+        </div>
+
+        <img id="quiz-image" src="" alt="問題画像">
+        
+        <div id="choices"></div>
+        <div id="feedback"></div>
+        <button id="next-btn" class="btn" onclick="nextQuestion()">次の問題へ</button>
+        <div id="explanation"></div>
+        <p id="result"></p>
+    </div>
+
+    <script src="quiz-data.js"></script>
+
+    <script>
+        /* =========================================
+           ここからJavaScript
+        ========================================= */
+        const TIME_LIMIT = 10; 
+        
+        /* 音声ファイルの読み込み（音を使うときはコメントを外す） */
+        /* const correctSound = new Audio("sound/correct.mp3"); */
+        /* const wrongSound = new Audio("sound/wrong.mp3");     */
+        /* const timeUpSound = new Audio("sound/timeup.mp3");   */
+
+        /* ★新機能：キャラクター画像を番号で管理するリスト */
+        /* ここに実際の画像ファイル名を入れてください */
+        const charImageList = {
+            1: "char1.png",  /* 1番のキャラ */
+            2: "char2.png",  /* 2番のキャラ */
+            3: "char3.png",  /* 3番のキャラ */
+            4: "char4.png",
+            5: "char5.png"
+        };
+
+        let currentQuizSet = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timerInterval;
+
+        const startScreen = document.getElementById('start-screen');
+        const quizContainer = document.getElementById('quiz-container');
+        
+        const questionEl = document.getElementById('question');
+        const charImageEl = document.getElementById('char-image');
+        const choicesEl = document.getElementById('choices');
+        const feedbackEl = document.getElementById('feedback');
+        const explanationEl = document.getElementById('explanation');
+        const imageEl = document.getElementById('quiz-image');
+        const nextBtn = document.getElementById('next-btn');
+        const resultEl = document.getElementById('result');
+        const difficultyLabel = document.getElementById('difficulty-label');
+        const timerEl = document.getElementById('timer');
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            quizContainer.style.display = 'block';
+            
+            /* playSilent(correctSound); */
+            /* playSilent(wrongSound); */
+            /* playSilent(timeUpSound); */
+
+            initQuiz();
+        }
+
+        function initQuiz() {
+            currentQuizSet = createBalancedQuizSet();
+            currentQuestionIndex = 0;
+            score = 0;
+            resultEl.textContent = "";
+            showQuestion();
+        }
+
+        function createBalancedQuizSet() {
+            const levels = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+            
+            if (typeof allQuizData === 'undefined' || allQuizData.length === 0) {
+                alert("問題データ(quiz-data.js)が見つかりません！");
+                return [];
+            }
+
+            allQuizData.forEach(q => {
+                if (levels[q.difficulty]) levels[q.difficulty].push(q);
+            });
+
+            const set1 = pickRandom(levels[1], 3);
+            const set2 = pickRandom(levels[2], 3);
+            const set3 = pickRandom(levels[3], 2);
+            const set4 = pickRandom(levels[4], 1);
+            const set5 = pickRandom(levels[5], 1);
+
+            return [...set1, ...set2, ...set3, ...set4, ...set5];
+        }
+
+        function pickRandom(array, n) {
+            if (!array || array.length === 0) return [];
+            const shuffled = array.sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, n);
+        }
+
+        function showQuestion() {
+            clearInterval(timerInterval);
+
+            feedbackEl.textContent = "";
+            feedbackEl.className = "";
+            nextBtn.style.display = "none";
+            explanationEl.style.display = "none";
+            choicesEl.innerHTML = "";
+            
+            /* timeUpSound.pause(); */
+            /* timeUpSound.currentTime = 0; */
+
+            if (currentQuestionIndex >= currentQuizSet.length) {
+                showResult();
+                return;
+            }
+
+            const currentQuiz = currentQuizSet[currentQuestionIndex];
+            const stars = "★".repeat(currentQuiz.difficulty);
+            difficultyLabel.textContent = `難易度: ${stars}`;
+
+            /* ★番号からキャラクター画像を呼び出す処理 */
+            const charNum = currentQuiz.charImage;
+
+            if (charNum && charImageList[charNum]) {
+                charImageEl.src = charImageList[charNum];
+                charImageEl.style.display = "block";
+            } else {
+                charImageEl.style.display = "none"; /* 該当する番号がない、またはnullの場合は隠す */
+            }
+
+            questionEl.textContent = `第${currentQuestionIndex + 1}問: ${currentQuiz.question}`;
+
+            if (currentQuiz.image) {
+                imageEl.src = currentQuiz.image;
+                imageEl.style.display = "block";
+            } else {
+                imageEl.style.display = "none";
+            }
+
+            currentQuiz.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.textContent = choice;
+                button.classList.add('btn');
+                button.onclick = () => checkAnswer(choice, currentQuiz.correct);
+                choicesEl.appendChild(button);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            let timeLeft = TIME_LIMIT;
+            timerEl.textContent = timeLeft;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeUp();
+                }
+            }, 1000);
+        }
+
+        function handleTimeUp() {
+            const currentQuiz = currentQuizSet[currentQuestionIndex];
+            
+            /* timeUpSound.play(); */
+
+            const buttons = choicesEl.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+
+            feedbackEl.textContent = `時間切れ...⏰ 正解は「${currentQuiz.correct}」です。`;
+            feedbackEl.classList.add('wrong');
+
+            if (currentQuiz.explanation) {
+                explanationEl.textContent = currentQuiz.explanation;
+                explanationEl.style.display = "block";
+            }
+            nextBtn.style.display = "block";
+        }
+
+        function checkAnswer(answer, correct) {
+            clearInterval(timerInterval);
+
+            const currentQuiz = currentQuizSet[currentQuestionIndex];
+            const buttons = choicesEl.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+
+            if (answer === correct) {
+                score++;
+                /* correctSound.currentTime = 0; */
+                /* correctSound.play(); */
+                feedbackEl.textContent = "正解！⭕️";
+                feedbackEl.classList.add('correct');
+            } else {
+                /* wrongSound.currentTime = 0; */
+                /* wrongSound.play(); */
+                feedbackEl.textContent = `残念...❌ 正解は「${correct}」です。`;
+                feedbackEl.classList.add('wrong');
+            }
+
+            if (currentQuiz.explanation) {
+                explanationEl.textContent = currentQuiz.explanation;
+                explanationEl.style.display = "block";
+            }
+            nextBtn.style.display = "block";
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            showQuestion();
+        }
+
+        function showResult() {
+            clearInterval(timerInterval);
+            
+            /* 結果画面では吹き出しエリアを隠す */
+            document.getElementById('speaker-area').style.display = "none";
+            questionEl.textContent = "全問終了！";
+            
+            imageEl.style.display = "none";
+            choicesEl.innerHTML = "";
+            feedbackEl.textContent = "";
+            nextBtn.style.display = "none";
+            explanationEl.style.display = "none";
+            difficultyLabel.textContent = "";
+            document.getElementById('timer-container').style.display = "none";
+
+            let comment = "";
+            let total = currentQuizSet.length; 
+
+            if (score === total) comment = "完璧です！クイズ王！👑";
+            else if (score >= total * 0.8) comment = "素晴らしい成績です！✨";
+            else if (score >= total * 0.5) comment = "ナイスファイト！👍";
+            else comment = "次はもっといけるはず！🔥";
+
+            resultEl.innerHTML = `
+                あなたのスコア: <span style="font-size:30px; color:#007bff;">${score}</span> / ${total}<br>
+                ${comment}<br><br>
+                <button class="btn" onclick="location.reload()">タイトルに戻る</button>
+            `;
+        }
+    </script>
+</body>
+</html>
